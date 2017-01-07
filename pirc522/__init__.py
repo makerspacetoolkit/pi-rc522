@@ -1,11 +1,11 @@
 import time
 import signal
 
-import spi as SPI
+import spidev
 import RPi.GPIO as GPIO
 
 
-__version__ = "1.1.0"
+__version__ = "1.2.0"
 
 
 class RFID(object):
@@ -41,11 +41,14 @@ class RFID(object):
 
     authed = False
 
-    def __init__(self, dev='/dev/spidev0.0', speed=1000000, pin_rst=22, pin_ce=0):
+    def __init__(self, bus=0, device=0, speed=1000000, pin_rst=22, pin_ce=0):
         self.pin_rst = pin_rst
         self.pin_ce = pin_ce
 
-        SPI.openSPI(device=dev, speed=speed)
+        self.spi = spidev.SpiDev()
+        self.spi.open(bus, device)
+        self.spi.max_speed_hz = speed
+
         GPIO.setmode(GPIO.BOARD)
         GPIO.setup(pin_rst, GPIO.OUT)
         GPIO.output(pin_rst, 1)
@@ -64,7 +67,7 @@ class RFID(object):
     def spi_transfer(self, data):
         if self.pin_ce != 0:
             GPIO.output(self.pin_ce, 0)
-        r = SPI.transfer(data)
+        r = self.spi.xfer2(list(data))
         if self.pin_ce != 0:
             GPIO.output(self.pin_ce, 1)
         return r
