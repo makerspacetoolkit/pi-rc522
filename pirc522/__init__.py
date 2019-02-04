@@ -258,6 +258,9 @@ class RFID(object):
                             uid_data.append(back_data[2])
                             uid_data.append(back_data[3])
                             uid_data.append(backData2[0])
+                            uid_data.append(backData2[1])
+                            uid_data.append(backData2[2])
+                            uid_data.append(backData2[3])
                     else:
                         # UID(4) (legth is 4 Bytes)
                         uid_data.append(back_data[0])
