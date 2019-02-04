@@ -32,7 +32,9 @@ class RFID(object):
 
     act_reqidl = 0x26
     act_reqall = 0x52
-    act_anticl = 0x93
+    act_anticl1 = 0x93 # 4 byte cards
+    act_anticl2 = 0x95 # 7 byte cards
+    act_anticl3 = 0x97 # 10 byte cards
     act_select = 0x93
     act_end = 0x50
 
@@ -63,6 +65,39 @@ class RFID(object):
         self.dev_write(0x15, 0x40)
         self.dev_write(0x11, 0x3D)
         self.set_antenna(True)
+
+    def list2HexStr(inDataPtr,inData):
+        i = 0
+        outStr = ""
+        while i<len(inData):
+            outStr = outStr+'{:02X}'.format(inData[i])
+            i = i+1
+        return outStr
+
+    def list2HexByte(inData):
+        i = 0
+        outStr = ""
+        while i<len(inData):
+            outStr = outStr+'{:02X} '.format(inData[i])
+            i = i+1
+        return outStr
+
+    def MFRC522_SendWithCRC(self, binDataPTR, binData):
+        backData = []
+        buf = []
+        pOut = []
+        i = 0
+        while i<len(binData):
+           buf.append(binData[i])
+           i = i+1
+        pOut = self.calculate_crc(buf)
+        buf.append(pOut[0])
+        buf.append(pOut[1])
+        (status, backData, backLen) = self.card_write(self.mode_transrec, buf)
+        if (status == False):
+           return (status,backData)
+        else:
+           return (status,0)
 
     def spi_transfer(self, data):
         if self.pin_ce != 0:
@@ -185,25 +220,55 @@ class RFID(object):
         """
         back_data = []
         serial_number = []
+        uid_data = []
 
         serial_number_check = 0
 
         self.dev_write(0x0D, 0x00)
-        serial_number.append(self.act_anticl)
+        serial_number.append(self.act_anticl1)
         serial_number.append(0x20)
-
         (error, back_data, back_bits) = self.card_write(self.mode_transrec, serial_number)
         if not error:
             if len(back_data) == 5:
                 for i in range(4):
                     serial_number_check = serial_number_check ^ back_data[i]
-
+                    if back_data[0] == 0x88:
+                        backDataT = []
+                        buf = []
+                        bufLen = 0
+                        buf.append(0x93)
+                        buf.append(0x70)
+                        j = 0
+                        while j<5:
+                           buf.append(back_data[j])
+                           j = j+1
+                      # calculate CRC and send command to card
+                        (status,backDataT) = self.MFRC522_SendWithCRC(self, buf)
+                        #7 byte card
+                        backData2 = []
+                        serNum2 = []
+                        serNum2.append(self.act_anticl2)
+                        serNum2.append(0x20)
+                        (status,backData2,backBits) = self.card_write(self.mode_transrec, serNum2)
+                        if backBits > 0:
+                            #print("backbits2 is:"+str(backBits))
+                            #print("back_data is:"+str(back_data))
+                            #print("backData2 is:"+str(backData2))
+                            uid_data.append(back_data[1])
+                            uid_data.append(back_data[2])
+                            uid_data.append(back_data[3])
+                            uid_data.append(backData2[0])
+                    else:
+                        # UID(4) (legth is 4 Bytes)
+                        uid_data.append(back_data[0])
+                        uid_data.append(back_data[1])
+                        uid_data.append(back_data[2])
+                        uid_data.append(back_data[3])
                 if serial_number_check != back_data[4]:
                     error = True
             else:
                 error = True
-
-        return (error, back_data)
+        return (error, back_data, uid_data)
 
     def calculate_crc(self, data):
         self.clear_bitmask(0x05, 0x04)

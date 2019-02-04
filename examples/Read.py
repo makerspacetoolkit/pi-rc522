@@ -23,19 +23,21 @@ while run:
     (error, data) = rdr.request()
     if not error:
         print("\nDetected: " + format(data, "02x"))
-
-    (error, uid) = rdr.anticoll()
+        state = "noerror"
+    (error, back_data, uid)  = rdr.anticoll()
     if not error:
         print("Card read UID: "+str(uid[0])+","+str(uid[1])+","+str(uid[2])+","+str(uid[3]))
-
-        print("Setting tag")
-        util.set_tag(uid)
+        card_serial = rdr.list2HexStr(uid)
+        card_serial = str(int(card_serial,16))
+        print("decimal "+str(card_serial))
+#        print("Setting tag")
+#        util.set_tag(uid)
         print("\nAuthorizing")
-        #util.auth(rdr.auth_a, [0x12, 0x34, 0x56, 0x78, 0x96, 0x92])
-        util.auth(rdr.auth_b, [0x74, 0x00, 0x52, 0x35, 0x00, 0xFF])
-        print("\nReading")
-        util.read_out(4)
-        print("\nDeauthorizing")
-        util.deauth()
+       #util.auth(rdr.auth_a, [0x12, 0x34, 0x56, 0x78, 0x96, 0x92])
+#        util.auth(rdr.auth_b, [0x74, 0x00, 0x52, 0x35, 0x00, 0xFF])
+#        print("\nReading")
+#        util.read_out(4)
+#        print("\nDeauthorizing")
+#        util.deauth()
 
         time.sleep(1)
